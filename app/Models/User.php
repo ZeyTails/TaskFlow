@@ -9,12 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -22,9 +21,15 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'first_name',
+        'last_name',
         'name',
+        'username',
         'email',
         'password',
+        'avatar_path',
+        'last_seen_at',
+        'is_active',
     ];
 
     /**
@@ -34,8 +39,6 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
         'remember_token',
     ];
 
@@ -48,6 +51,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_seen_at' => 'datetime',
+            'is_active' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -71,8 +76,9 @@ class User extends Authenticatable
 
     public function workspaces(): BelongsToMany
     {
-        return $this->belongsToMany(Workspace::class)
-            ->withPivot('role')
+        return $this->belongsToMany(Workspace::class, 'workspace_user')
+            ->withPivot('role', 'job_title', 'status', 'suspended_at')
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->withTimestamps();
     }
 
@@ -89,5 +95,10 @@ class User extends Authenticatable
     public function taskComments(): HasMany
     {
         return $this->hasMany(TaskComment::class);
+    }
+
+    public function sentWorkspaceInvitations(): HasMany
+    {
+        return $this->hasMany(WorkspaceInvitation::class, 'invited_by');
     }
 }

@@ -16,6 +16,7 @@ class WorkspacePolicy
     {
         return $workspace->members()
             ->whereKey($user->id)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->exists();
     }
 
@@ -44,6 +45,7 @@ class WorkspacePolicy
         return $workspace->members()
             ->whereKey($user->id)
             ->wherePivot('role', Workspace::ROLE_OWNER)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->exists();
     }
 }

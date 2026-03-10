@@ -27,7 +27,9 @@ class TaskFactory extends Factory
             'description' => fake()->optional()->paragraph(),
             'status' => fake()->randomElement(Task::STATUSES),
             'priority' => fake()->randomElement(Task::PRIORITIES),
-            'due_date' => fake()->optional()->dateTimeBetween('-7 days', '+20 days')->format('Y-m-d'),
+            'due_date' => fake()->boolean(70)
+                ? fake()->dateTimeBetween('-7 days', '+20 days')->format('Y-m-d')
+                : null,
             'assignee_id' => User::factory(),
             'created_by' => User::factory(),
         ];

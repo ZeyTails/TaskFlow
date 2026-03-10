@@ -33,6 +33,21 @@ class WorkspacePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser($outsider)->allows('view', $workspace));
     }
 
+    public function test_suspended_member_cannot_view_workspace(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $user->id,
+        ]);
+
+        $workspace->members()->attach($user->id, [
+            'role' => Workspace::ROLE_MEMBER,
+            'status' => Workspace::MEMBER_STATUS_SUSPENDED,
+        ]);
+
+        $this->assertFalse(Gate::forUser($user)->allows('view', $workspace));
+    }
+
     private function workspaceWithMembers(): array
     {
         $owner = User::factory()->create();
@@ -44,9 +59,18 @@ class WorkspacePolicyTest extends TestCase
         ]);
 
         $workspace->members()->attach([
-            $owner->id => ['role' => Workspace::ROLE_OWNER],
-            $member->id => ['role' => Workspace::ROLE_MEMBER],
-            $viewer->id => ['role' => Workspace::ROLE_VIEWER],
+            $owner->id => [
+                'role' => Workspace::ROLE_OWNER,
+                'status' => Workspace::MEMBER_STATUS_ACTIVE,
+            ],
+            $member->id => [
+                'role' => Workspace::ROLE_MEMBER,
+                'status' => Workspace::MEMBER_STATUS_ACTIVE,
+            ],
+            $viewer->id => [
+                'role' => Workspace::ROLE_VIEWER,
+                'status' => Workspace::MEMBER_STATUS_ACTIVE,
+            ],
         ]);
 
         return [$owner, $member, $viewer, $workspace];

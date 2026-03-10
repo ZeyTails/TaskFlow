@@ -24,6 +24,8 @@ class ProjectFactory extends Factory
             'workspace_id' => Workspace::factory(),
             'name' => fake()->words(3, true),
             'description' => fake()->optional()->sentence(),
+            'priority' => fake()->randomElement(Project::PRIORITIES),
+            'status' => fake()->randomElement(Project::STATUSES),
         ];
     }
 }

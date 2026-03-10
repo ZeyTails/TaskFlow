@@ -18,18 +18,24 @@ class TaskFlowDemoSeeder extends Seeder
     public function run(): void
     {
         $owner = User::factory()->create([
+            'first_name' => 'Owner',
+            'last_name' => 'User',
             'name' => 'Owner User',
             'email' => 'owner@taskflow.test',
             'password' => Hash::make('password'),
         ]);
 
         $member = User::factory()->create([
+            'first_name' => 'Member',
+            'last_name' => 'User',
             'name' => 'Member User',
             'email' => 'member@taskflow.test',
             'password' => Hash::make('password'),
         ]);
 
         $viewer = User::factory()->create([
+            'first_name' => 'Viewer',
+            'last_name' => 'User',
             'name' => 'Viewer User',
             'email' => 'viewer@taskflow.test',
             'password' => Hash::make('password'),

@@ -27,12 +27,13 @@ class TaskCommentPolicy
     public function delete(User $user, TaskComment $taskComment): bool
     {
         if ($taskComment->user_id === $user->id) {
-            return true;
+            return $this->canReadWorkspace($user, $taskComment->task->project->workspace);
         }
 
         return $taskComment->task->project->workspace->members()
             ->whereKey($user->id)
             ->wherePivot('role', Workspace::ROLE_OWNER)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->exists();
     }
 
@@ -40,6 +41,7 @@ class TaskCommentPolicy
     {
         return $workspace->members()
             ->whereKey($user->id)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->exists();
     }
 
@@ -47,6 +49,7 @@ class TaskCommentPolicy
     {
         return $workspace->members()
             ->whereKey($user->id)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->wherePivotIn('role', [Workspace::ROLE_OWNER, Workspace::ROLE_MEMBER])
             ->exists();
     }

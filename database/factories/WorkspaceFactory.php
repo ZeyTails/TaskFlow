@@ -22,6 +22,7 @@ class WorkspaceFactory extends Factory
     {
         return [
             'name' => fake()->company(),
+            'icon_key' => fake()->randomElement(Workspace::ICON_KEYS),
             'owner_id' => User::factory(),
         ];
     }

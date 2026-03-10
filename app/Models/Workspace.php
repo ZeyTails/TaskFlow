@@ -22,8 +22,28 @@ class Workspace extends Model
         self::ROLE_VIEWER,
     ];
 
+    public const MEMBER_STATUS_ACTIVE = 'active';
+    public const MEMBER_STATUS_SUSPENDED = 'suspended';
+
+    public const MEMBER_STATUSES = [
+        self::MEMBER_STATUS_ACTIVE,
+        self::MEMBER_STATUS_SUSPENDED,
+    ];
+
+    public const ICON_KEYS = [
+        'briefcase',
+        'users',
+        'folder',
+        'rocket',
+        'bolt',
+        'target',
+        'calendar',
+        'layers',
+    ];
+
     protected $fillable = [
         'name',
+        'icon_key',
         'owner_id',
     ];
 
@@ -34,13 +54,18 @@ class Workspace extends Model
 
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)
-            ->withPivot('role')
+        return $this->belongsToMany(User::class, 'workspace_user')
+            ->withPivot('role', 'job_title', 'status', 'suspended_at')
             ->withTimestamps();
     }
 
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(WorkspaceInvitation::class);
     }
 }

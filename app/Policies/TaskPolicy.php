@@ -43,6 +43,7 @@ class TaskPolicy
     {
         return $workspace->members()
             ->whereKey($user->id)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->exists();
     }
 
@@ -50,6 +51,7 @@ class TaskPolicy
     {
         return $workspace->members()
             ->whereKey($user->id)
+            ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->wherePivotIn('role', [Workspace::ROLE_OWNER, Workspace::ROLE_MEMBER])
             ->exists();
     }

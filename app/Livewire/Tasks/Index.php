@@ -78,8 +78,8 @@ class Index extends Component
             'assigneeId' => [
                 'nullable',
                 'integer',
-                Rule::exists('workspace_user', 'user_id')->where(function ($query) use ($workspace): void {
-                    $query->where('workspace_id', $workspace->id)
+                Rule::exists('workspace_user', 'user_id')->where(function ($query): void {
+                    $query->where('workspace_id', $this->workspace->id)
                         ->where('status', Workspace::MEMBER_STATUS_ACTIVE);
                 }),
             ],
@@ -144,8 +144,8 @@ class Index extends Component
             'editAssigneeId' => [
                 'nullable',
                 'integer',
-                Rule::exists('workspace_user', 'user_id')->where(function ($query) use ($workspace): void {
-                    $query->where('workspace_id', $workspace->id)
+                Rule::exists('workspace_user', 'user_id')->where(function ($query): void {
+                    $query->where('workspace_id', $this->workspace->id)
                         ->where('status', Workspace::MEMBER_STATUS_ACTIVE);
                 }),
             ],

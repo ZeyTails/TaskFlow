@@ -2,6 +2,7 @@
 
 use App\Livewire\Projects\Index as ProjectIndex;
 use App\Livewire\Tasks\Index as TaskIndex;
+use App\Livewire\Tasks\Show as TaskShow;
 use App\Livewire\Workspaces\Index as WorkspaceIndex;
 use App\Livewire\Workspaces\Members as WorkspaceMembers;
 use App\Models\Project;
@@ -117,6 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('workspaces/{workspace}/members', WorkspaceMembers::class)->name('workspaces.members.index');
     Route::get('workspaces/{workspace}/projects', ProjectIndex::class)->name('workspaces.projects.index');
     Route::get('workspaces/{workspace}/projects/{project}/tasks', TaskIndex::class)->name('workspaces.projects.tasks.index');
+    Route::get('tasks/{task}', TaskShow::class)->name('tasks.show');
 });
 
 require __DIR__.'/settings.php';

@@ -244,8 +244,15 @@
                                     {{ $task->due_date?->format('d/m/Y') ?? '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    @if ($canWrite)
-                                        <div class="flex justify-end gap-2">
+                                    <div class="flex justify-end gap-2">
+                                        <a
+                                            href="{{ route('tasks.show', $task) }}"
+                                            wire:navigate
+                                            class="inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                                        >
+                                            Voir
+                                        </a>
+                                        @if ($canWrite)
                                             <button
                                                 type="button"
                                                 wire:click="startEditing({{ $task->id }})"
@@ -261,10 +268,8 @@
                                             >
                                                 Supprimer
                                             </button>
-                                        </div>
-                                    @else
-                                        <span class="text-xs text-zinc-500 dark:text-zinc-400">-</span>
-                                    @endif
+                                        @endif
+                                    </div>
                                 </td>
                             @endif
                         </tr>

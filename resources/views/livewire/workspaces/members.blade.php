@@ -10,12 +10,13 @@
     <div class="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <div class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-                    @svg('icon-' . ($workspace->icon_key ?? 'briefcase'), 'h-5 w-5')
-                </div>
+                <x-workspace-icon :workspace="$workspace" size="lg" />
                 <div>
-                    <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Membres du workspace</h1>
-                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{{ $workspace->name }}</p>
+                    <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Membres de l espace</h1>
+                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                        <p class="text-sm text-zinc-600 dark:text-zinc-400">{{ $workspace->name }}</p>
+                        <x-workspace-theme-badge :workspace="$workspace" />
+                    </div>
                 </div>
             </div>
 
@@ -78,7 +79,7 @@
                 >
                     <option value="all">Tous</option>
                     <option value="{{ \App\Models\Workspace::MEMBER_STATUS_ACTIVE }}">Actif</option>
-                    <option value="invited">Invite</option>
+                    <option value="invited">Invites</option>
                     <option value="{{ \App\Models\Workspace::MEMBER_STATUS_SUSPENDED }}">Suspendu</option>
                 </select>
             </div>
@@ -132,7 +133,7 @@
                                     {{ $member->email }}
                                 </td>
                                 <td class="px-4 py-3">
-                                    @if ($canManageMembers && $editingMemberId === $member->id)
+                                    @if ($canManageMembers && $editingMemberId === $member->id && $member->id !== $workspace->owner_id)
                                         <select
                                             wire:model="memberRoles.{{ $member->id }}"
                                             class="w-full min-w-36 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -170,7 +171,7 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    @if ($canManageMembers && $member->id !== $workspace->owner_id)
+                                    @if ($canManageMembers)
                                         <div class="relative z-20 flex justify-end">
                                             <flux:dropdown position="bottom" align="end">
                                                 <button
@@ -206,52 +207,54 @@
                                                             wire:click="startEditing({{ $member->id }})"
                                                             class="!text-blue-700 dark:!text-blue-300 [&[data-active]]:!bg-blue-50 dark:[&[data-active]]:!bg-blue-900/20"
                                                         >
-                                                            Modifier
+                                                            {{ $member->id === $workspace->owner_id ? 'Modifier le titre' : 'Modifier' }}
                                                         </flux:menu.item>
                                                     @endif
 
-                                                    @if ($member->pivot->status === \App\Models\Workspace::MEMBER_STATUS_ACTIVE)
+                                                    @if ($member->id !== $workspace->owner_id)
+                                                        @if ($member->pivot->status === \App\Models\Workspace::MEMBER_STATUS_ACTIVE)
+                                                            <flux:menu.item
+                                                                as="button"
+                                                                type="button"
+                                                                wire:click="suspendMember({{ $member->id }})"
+                                                                class="!text-amber-700 dark:!text-amber-300 [&[data-active]]:!bg-amber-50 dark:[&[data-active]]:!bg-amber-900/20"
+                                                            >
+                                                                Suspendre
+                                                            </flux:menu.item>
+                                                        @else
+                                                            <flux:menu.item
+                                                                as="button"
+                                                                type="button"
+                                                                wire:click="activateMember({{ $member->id }})"
+                                                                class="!text-emerald-700 dark:!text-emerald-300 [&[data-active]]:!bg-emerald-50 dark:[&[data-active]]:!bg-emerald-900/20"
+                                                            >
+                                                                Reactiver
+                                                            </flux:menu.item>
+                                                        @endif
+
                                                         <flux:menu.item
                                                             as="button"
                                                             type="button"
-                                                            wire:click="suspendMember({{ $member->id }})"
-                                                            class="!text-amber-700 dark:!text-amber-300 [&[data-active]]:!bg-amber-50 dark:[&[data-active]]:!bg-amber-900/20"
+                                                            wire:click="transferOwnership({{ $member->id }})"
+                                                            wire:confirm="Transferer la propriete a ce membre ?"
+                                                            class="!text-sky-700 dark:!text-sky-300 [&[data-active]]:!bg-sky-50 dark:[&[data-active]]:!bg-sky-900/20"
                                                         >
-                                                            Suspendre
+                                                            Transferer la propriete
                                                         </flux:menu.item>
-                                                    @else
+
+                                                        <flux:menu.separator />
+
                                                         <flux:menu.item
                                                             as="button"
                                                             type="button"
-                                                            wire:click="activateMember({{ $member->id }})"
-                                                            class="!text-emerald-700 dark:!text-emerald-300 [&[data-active]]:!bg-emerald-50 dark:[&[data-active]]:!bg-emerald-900/20"
+                                                            variant="danger"
+                                                            wire:click="removeMember({{ $member->id }})"
+                                                            wire:confirm="Retirer ce membre de l espace ?"
+                                                            class="!text-red-700 dark:!text-red-300 [&[data-active]]:!bg-red-50 dark:[&[data-active]]:!bg-red-900/20"
                                                         >
-                                                            Reactiver
+                                                            Retirer
                                                         </flux:menu.item>
                                                     @endif
-
-                                                    <flux:menu.item
-                                                        as="button"
-                                                        type="button"
-                                                        wire:click="transferOwnership({{ $member->id }})"
-                                                        wire:confirm="Transferer ownership a ce membre ?"
-                                                        class="!text-sky-700 dark:!text-sky-300 [&[data-active]]:!bg-sky-50 dark:[&[data-active]]:!bg-sky-900/20"
-                                                    >
-                                                        Transferer ownership
-                                                    </flux:menu.item>
-
-                                                    <flux:menu.separator />
-
-                                                    <flux:menu.item
-                                                        as="button"
-                                                        type="button"
-                                                        variant="danger"
-                                                        wire:click="removeMember({{ $member->id }})"
-                                                        wire:confirm="Retirer ce membre du workspace ?"
-                                                        class="!text-red-700 dark:!text-red-300 [&[data-active]]:!bg-red-50 dark:[&[data-active]]:!bg-red-900/20"
-                                                    >
-                                                        Retirer
-                                                    </flux:menu.item>
                                                 </flux:menu>
                                             </flux:dropdown>
                                         </div>
@@ -273,7 +276,7 @@
             </div>
         @else
             <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-900/20 dark:text-blue-300">
-                Filtre "Invite" actif. La liste des invitations en attente est affichee ci-dessous.
+                Filtre "Invites" actif. La liste des invitations en attente est affichee ci-dessous.
             </div>
         @endif
     </div>

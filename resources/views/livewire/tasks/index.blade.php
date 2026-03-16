@@ -1,9 +1,15 @@
 <div class="mx-auto w-full max-w-6xl space-y-6">
     <div class="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $project->name }}</h1>
-                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Taches du projet</p>
+            <div class="flex items-start gap-3">
+                <x-workspace-icon :workspace="$workspace" size="lg" />
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $project->name }}</h1>
+                        <x-workspace-theme-badge :workspace="$workspace" />
+                    </div>
+                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Taches du projet</p>
+                </div>
             </div>
             <a
                 href="{{ route('workspaces.projects.index', $workspace) }}"
@@ -14,6 +20,44 @@
             </a>
         </div>
 
+        <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-end">
+            <div>
+                <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span class="rounded-full border border-zinc-200 px-2.5 py-1 dark:border-zinc-700">
+                        {{ $projectTasksCount }} tache(s)
+                    </span>
+                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-900/20 dark:text-emerald-300">
+                        {{ $projectCompletedTasksCount }} terminee(s)
+                    </span>
+                    <span class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-700 dark:border-blue-900/60 dark:bg-blue-900/20 dark:text-blue-300">
+                        {{ $projectInProgressTasksCount }} en cours
+                    </span>
+                    <span class="rounded-full border border-zinc-200 px-2.5 py-1 dark:border-zinc-700">
+                        {{ $projectTodoTasksCount }} a faire
+                    </span>
+                </div>
+
+                <div class="mt-4">
+                    <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>Avancement du projet</span>
+                        <span>{{ $projectProgressRate }}%</span>
+                    </div>
+                    <div class="mt-2 h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <div
+                            class="h-2.5 rounded-full bg-zinc-900 transition-all dark:bg-zinc-100"
+                            style="width: {{ $projectProgressRate }}%"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/60">
+                <p class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Progression</p>
+                <p class="mt-2 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $projectProgressRate }}%</p>
+                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Basee sur les taches terminees du projet.</p>
+            </div>
+        </div>
+
         @if (session('status'))
             <div class="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-900/20 dark:text-green-300">
                 {{ session('status') }}
@@ -21,7 +65,8 @@
         @endif
 
         @if ($canWrite)
-            <form wire:submit="createTask" class="mt-5 grid gap-3 md:grid-cols-[1.2fr_1.2fr_140px_140px_180px_180px_auto] md:items-end">
+            <form wire:submit="createTask" class="mt-5 space-y-5">
+                <div class="grid gap-3 md:grid-cols-[1.2fr_1.2fr_140px_140px_180px_auto] md:items-end">
                 <flux:input
                     wire:model="title"
                     label="Titre"
@@ -43,9 +88,9 @@
                         wire:model="status"
                         class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                     >
-                        <option value="todo">Todo</option>
-                        <option value="in_progress">In progress</option>
-                        <option value="done">Done</option>
+                        <option value="todo">A faire</option>
+                        <option value="in_progress">En cours</option>
+                        <option value="done">Terminee</option>
                     </select>
                 </div>
 
@@ -55,9 +100,9 @@
                         wire:model="priority"
                         class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                     >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
+                        <option value="low">Basse</option>
+                        <option value="medium">Moyenne</option>
+                        <option value="high">Haute</option>
                     </select>
                 </div>
 
@@ -67,26 +112,56 @@
                     type="date"
                 />
 
-                <div>
-                    <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Assignee</label>
-                    <select
-                        wire:model="assigneeId"
-                        class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                    >
-                        <option value="">Non assigne</option>
-                        @foreach ($members as $member)
-                            <option value="{{ $member->id }}">{{ $member->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
                 <button
                     type="submit"
                     class="inline-flex items-center justify-center rounded-lg border border-black bg-black px-3 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                 >
                     Ajouter
                 </button>
+                </div>
+
+                <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/60">
+                    @include('livewire.tasks.partials.assignee-summary', [
+                        'members' => $members,
+                        'selected' => $assigneeIds,
+                        'label' => 'Personnes assignees',
+                        'modalName' => 'create-task-assignees',
+                        'errorKey' => 'assigneeIds',
+                        'errorItemKey' => 'assigneeIds.*',
+                    ])
+                </div>
             </form>
+
+            <flux:modal name="create-task-assignees" :show="$errors->has('assigneeIds') || $errors->has('assigneeIds.*')" focusable class="max-w-2xl">
+                <div class="space-y-5">
+                    <div>
+                        <flux:heading size="lg">Assigner la tache</flux:heading>
+                        <flux:subheading>
+                            Choisissez une ou plusieurs personnes du workspace.
+                        </flux:subheading>
+                    </div>
+
+                    @include('livewire.tasks.partials.assignee-picker', [
+                        'members' => $members,
+                        'selected' => $assigneeIds,
+                        'model' => 'assigneeIds',
+                        'label' => 'Personnes assignees',
+                        'errorKey' => 'assigneeIds',
+                        'errorItemKey' => 'assigneeIds.*',
+                    ])
+
+                    <div class="flex justify-end">
+                        <flux:modal.close>
+                            <button
+                                type="button"
+                                class="inline-flex items-center justify-center rounded-lg border border-black bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                            >
+                                Valider
+                            </button>
+                        </flux:modal.close>
+                    </div>
+                </div>
+            </flux:modal>
         @else
             <div class="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                 Vous avez un acces en lecture seule sur ce projet.
@@ -111,9 +186,9 @@
                     class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                 >
                     <option value="all">Tous</option>
-                    <option value="todo">Todo</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="done">Done</option>
+                    <option value="todo">A faire</option>
+                    <option value="in_progress">En cours</option>
+                    <option value="done">Terminee</option>
                 </select>
             </div>
 
@@ -124,14 +199,14 @@
                     class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                 >
                     <option value="all">Toutes</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low">Basse</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="high">Haute</option>
                 </select>
             </div>
 
             <div>
-                <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Assignee</label>
+                    <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Assigne</label>
                 <select
                     wire:model.live="filterAssignee"
                     class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -151,7 +226,7 @@
                 <thead>
                     <tr class="text-left text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                         <th class="px-4 py-3">Titre</th>
-                        <th class="px-4 py-3">Assignee</th>
+                        <th class="px-4 py-3">Assignes</th>
                         <th class="px-4 py-3">Statut</th>
                         <th class="px-4 py-3">Priorite</th>
                         <th class="px-4 py-3">Echeance</th>
@@ -163,7 +238,8 @@
                         <tr class="border-t border-zinc-200 text-sm dark:border-zinc-800">
                             @if ($editingTaskId === $task->id)
                                 <td class="px-4 py-3" colspan="6">
-                                    <form wire:submit="updateTask" class="grid gap-3 md:grid-cols-[1.2fr_1.2fr_140px_140px_180px_180px_auto_auto] md:items-end">
+                                    <form wire:submit="updateTask" class="space-y-5">
+                                        <div class="grid gap-3 md:grid-cols-[1.2fr_1.2fr_140px_140px_180px_auto_auto] md:items-end">
                                         <flux:input wire:model="editTitle" label="Titre" type="text" required />
                                         <flux:input wire:model="editDescription" label="Description" type="text" />
 
@@ -173,9 +249,9 @@
                                                 wire:model="editStatus"
                                                 class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                                             >
-                                                <option value="todo">Todo</option>
-                                                <option value="in_progress">In progress</option>
-                                                <option value="done">Done</option>
+                                                <option value="todo">A faire</option>
+                                                <option value="in_progress">En cours</option>
+                                                <option value="done">Terminee</option>
                                             </select>
                                         </div>
 
@@ -185,26 +261,13 @@
                                                 wire:model="editPriority"
                                                 class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                                             >
-                                                <option value="low">Low</option>
-                                                <option value="medium">Medium</option>
-                                                <option value="high">High</option>
+                                                <option value="low">Basse</option>
+                                                <option value="medium">Moyenne</option>
+                                                <option value="high">Haute</option>
                                             </select>
                                         </div>
 
                                         <flux:input wire:model="editDueDate" label="Echeance" type="date" />
-
-                                        <div>
-                                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Assignee</label>
-                                            <select
-                                                wire:model="editAssigneeId"
-                                                class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                                            >
-                                                <option value="">Non assigne</option>
-                                                @foreach ($members as $member)
-                                                    <option value="{{ $member->id }}">{{ $member->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
 
                                         <button
                                             type="submit"
@@ -220,7 +283,50 @@
                                         >
                                             Annuler
                                         </button>
+                                        </div>
+
+                                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/60">
+                                            @include('livewire.tasks.partials.assignee-summary', [
+                                                'members' => $members,
+                                                'selected' => $editAssigneeIds,
+                                                'label' => 'Personnes assignees',
+                                                'modalName' => 'edit-task-assignees',
+                                                'errorKey' => 'editAssigneeIds',
+                                                'errorItemKey' => 'editAssigneeIds.*',
+                                            ])
+                                        </div>
                                     </form>
+
+                                    <flux:modal name="edit-task-assignees" :show="$errors->has('editAssigneeIds') || $errors->has('editAssigneeIds.*')" focusable class="max-w-2xl">
+                                        <div class="space-y-5">
+                                            <div>
+                                                <flux:heading size="lg">Modifier les assignes</flux:heading>
+                                                <flux:subheading>
+                                                    Mettez a jour les personnes liees a cette tache.
+                                                </flux:subheading>
+                                            </div>
+
+                                            @include('livewire.tasks.partials.assignee-picker', [
+                                                'members' => $members,
+                                                'selected' => $editAssigneeIds,
+                                                'model' => 'editAssigneeIds',
+                                                'label' => 'Personnes assignees',
+                                                'errorKey' => 'editAssigneeIds',
+                                                'errorItemKey' => 'editAssigneeIds.*',
+                                            ])
+
+                                            <div class="flex justify-end">
+                                                <flux:modal.close>
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center rounded-lg border border-black bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                                                    >
+                                                        Valider
+                                                    </button>
+                                                </flux:modal.close>
+                                            </div>
+                                        </div>
+                                    </flux:modal>
                                 </td>
                             @else
                                 <td class="px-4 py-3">
@@ -228,16 +334,32 @@
                                     <div class="text-xs text-zinc-500 dark:text-zinc-400">{{ $task->description ?: 'Sans description' }}</div>
                                 </td>
                                 <td class="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                                    {{ $task->assignee?->name ?? 'Non assigne' }}
+                                    @if ($task->assignees->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1.5">
+                                            @foreach ($task->assignees as $assignee)
+                                                @php
+                                                    $workspaceMember = $members->firstWhere('id', $assignee->id);
+                                                @endphp
+                                                <span class="inline-flex items-center rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
+                                                    {{ $assignee->name }}
+                                                    @if ($workspaceMember?->pivot?->job_title)
+                                                        <span class="ml-1 text-zinc-500 dark:text-zinc-400">· {{ $workspaceMember->pivot->job_title }}</span>
+                                                    @endif
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        Non assigne
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-                                        {{ str_replace('_', ' ', $task->status) }}
+                                        {{ \App\Models\Task::statusLabel($task->status) }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-                                        {{ ucfirst($task->priority) }}
+                                        {{ \App\Models\Task::priorityLabel($task->priority) }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-zinc-600 dark:text-zinc-400">

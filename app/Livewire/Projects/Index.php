@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Projects;
 
+use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\Workspace;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -62,11 +63,19 @@ class Index extends Component
             'status' => ['required', Rule::in(Project::STATUSES)],
         ]);
 
-        $this->workspace->projects()->create([
+        $project = $this->workspace->projects()->create([
             'name' => $validated['name'],
             'description' => $validated['description'],
             'priority' => $validated['priority'],
             'status' => $validated['status'],
+        ]);
+
+        ActivityLog::create([
+            'workspace_id' => $this->workspace->id,
+            'project_id' => $project->id,
+            'user_id' => Auth::id(),
+            'type' => 'project_created',
+            'description' => Auth::user()->name.' a cree le projet "'.$project->name.'".',
         ]);
 
         $this->reset(['name', 'description', 'priority', 'status', 'showCreateForm']);
@@ -131,6 +140,14 @@ class Index extends Component
             'status' => $validated['editStatus'],
         ]);
 
+        ActivityLog::create([
+            'workspace_id' => $this->workspace->id,
+            'project_id' => $project->id,
+            'user_id' => Auth::id(),
+            'type' => 'project_updated',
+            'description' => Auth::user()->name.' a mis a jour le projet "'.$project->name.'".',
+        ]);
+
         $this->cancelEditing();
         session()->flash('status', 'Projet mis a jour avec succes.');
     }
@@ -139,6 +156,14 @@ class Index extends Component
     {
         $project = $this->workspace->projects()->findOrFail($projectId);
         $this->authorize('delete', $project);
+
+        ActivityLog::create([
+            'workspace_id' => $this->workspace->id,
+            'project_id' => $project->id,
+            'user_id' => Auth::id(),
+            'type' => 'project_deleted',
+            'description' => Auth::user()->name.' a supprime le projet "'.$project->name.'".',
+        ]);
 
         $project->delete();
 
@@ -155,7 +180,7 @@ class Index extends Component
 
         $this->workspace->delete();
 
-        session()->flash('status', 'Workspace supprime.');
+        session()->flash('status', 'Espace supprime.');
 
         return redirect()->route('workspaces.index');
     }
@@ -174,7 +199,7 @@ class Index extends Component
         ]);
 
         $this->workspace->refresh();
-        session()->flash('status', 'Icone du workspace mise a jour.');
+        session()->flash('status', 'Icone de l espace mise a jour.');
     }
 
     public function render()
@@ -183,7 +208,10 @@ class Index extends Component
 
         $projects = $this->workspace
             ->projects()
-            ->withCount('tasks')
+            ->withCount([
+                'tasks',
+                'tasks as completed_tasks_count' => fn ($query) => $query->where('status', \App\Models\Task::STATUS_DONE),
+            ])
             ->orderByDesc('created_at')
             ->get();
 

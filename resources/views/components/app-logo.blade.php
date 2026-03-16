@@ -3,9 +3,9 @@
 ])
 
 @if($sidebar)
-    <flux:sidebar.brand name="TaskFlow" {{ $attributes }}>
-        <x-slot name="logo" class="flex aspect-square size-8 items-center justify-center rounded-md bg-accent-content text-accent-foreground">
-            <x-app-logo-icon class="size-5 fill-current text-white dark:text-black" />
+    <flux:sidebar.brand {{ $attributes }}>
+        <x-slot name="logo">
+            <x-taskflow-logo class="h-7 w-auto text-zinc-900 dark:text-zinc-100" />
         </x-slot>
     </flux:sidebar.brand>
 @else

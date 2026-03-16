@@ -5,11 +5,11 @@
                 <flux:dropdown position="bottom" align="start" class="group">
                     <button
                         type="button"
-                        class="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                        class="group/workspace-icon relative"
                         @if (! $canManageMembers) disabled @endif
-                        aria-label="Changer l'icone du workspace"
+                        aria-label="Changer l icone de l espace"
                     >
-                        @svg('icon-' . ($workspace->icon_key ?? 'briefcase'), 'h-5 w-5')
+                        <x-workspace-icon :workspace="$workspace" size="lg" class="transition group-hover/workspace-icon:scale-105" />
                         @if ($canManageMembers)
                             <span class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-black/60 text-white opacity-0 transition group-hover:opacity-100">
                                 @svg('icon-pencil', 'h-4 w-4')
@@ -22,7 +22,7 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Icones</div>
-                                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Cliquez pour changer l'icone du workspace.</p>
+                                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Cliquez pour changer l icone de l espace.</p>
                                 </div>
                                 <span class="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
                                     {{ strtoupper($workspace->icon_key ?? 'briefcase') }}
@@ -30,12 +30,15 @@
                             </div>
                             <div class="mt-4 grid grid-cols-4 gap-2">
                                 @foreach (\App\Models\Workspace::ICON_KEYS as $iconKey)
-                                    @php $isActive = ($workspace->icon_key ?? 'briefcase') === $iconKey; @endphp
+                                    @php
+                                        $isActive = ($workspace->icon_key ?? 'briefcase') === $iconKey;
+                                        $theme = \App\Models\Workspace::themeFor($iconKey);
+                                    @endphp
                                     <button
                                         type="button"
                                         wire:click="updateWorkspaceIcon('{{ $iconKey }}')"
-                                        class="flex h-11 w-11 items-center justify-center rounded-xl border text-zinc-700 transition dark:text-zinc-200
-                                            {{ $isActive ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900' : 'border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800' }}"
+                                        class="flex h-11 w-11 items-center justify-center rounded-xl border transition
+                                            {{ $isActive ? $theme['icon'].' ring-2 ring-offset-2 ring-zinc-900 dark:ring-zinc-100 dark:ring-offset-zinc-900' : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800' }}"
                                         aria-label="Choisir l'icone {{ $iconKey }}"
                                     >
                                         @svg('icon-' . $iconKey, 'h-4 w-4')
@@ -47,7 +50,10 @@
                 </flux:dropdown>
 
                 <div>
-                    <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $workspace->name }}</h1>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $workspace->name }}</h1>
+                        <x-workspace-theme-badge :workspace="$workspace" />
+                    </div>
                     <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Projets dans cet espace</p>
                     <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                         <span class="rounded-full border border-zinc-200 px-2 py-0.5 dark:border-zinc-700">
@@ -82,7 +88,7 @@
                         type="button"
                         class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                     >
-                        Gerer le workspace
+                        Gerer l espace
                     </button>
 
                     <flux:menu>
@@ -97,9 +103,9 @@
                                 type="button"
                                 variant="danger"
                                 wire:click="deleteWorkspace"
-                                wire:confirm="Supprimer ce workspace et tous ses projets ?"
+                                wire:confirm="Supprimer cet espace et tous ses projets ?"
                             >
-                                Supprimer le workspace
+                                Supprimer l espace
                             </flux:menu.item>
                         @endcan
                     </flux:menu>
@@ -161,9 +167,9 @@
                             wire:model="priority"
                             class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
+                            <option value="low">Basse</option>
+                            <option value="medium">Moyenne</option>
+                            <option value="high">Haute</option>
                         </select>
                     </div>
 
@@ -174,8 +180,8 @@
                             class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         >
                             <option value="active">Active</option>
-                            <option value="on_hold">On hold</option>
-                            <option value="archived">Archived</option>
+                            <option value="on_hold">En pause</option>
+                            <option value="archived">Archive</option>
                         </select>
                     </div>
 
@@ -208,9 +214,9 @@
                             wire:model="editPriority"
                             class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
+                            <option value="low">Basse</option>
+                            <option value="medium">Moyenne</option>
+                            <option value="high">Haute</option>
                         </select>
                     </div>
 
@@ -221,8 +227,8 @@
                             class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         >
                             <option value="active">Active</option>
-                            <option value="on_hold">On hold</option>
-                            <option value="archived">Archived</option>
+                            <option value="on_hold">En pause</option>
+                            <option value="archived">Archive</option>
                         </select>
                     </div>
 
@@ -251,11 +257,23 @@
                                     {{ $project->tasks_count }} tache(s)
                                 </span>
                                 <span class="rounded-full border border-zinc-200 px-2 py-0.5 dark:border-zinc-700">
-                                    Priorite: {{ ucfirst($project->priority) }}
+                                    {{ $project->completed_tasks_count }} terminee(s)
                                 </span>
                                 <span class="rounded-full border border-zinc-200 px-2 py-0.5 dark:border-zinc-700">
-                                    Statut: {{ str_replace('_', ' ', $project->status) }}
+                                    Priorite: {{ \App\Models\Project::priorityLabel($project->priority) }}
                                 </span>
+                                <span class="rounded-full border border-zinc-200 px-2 py-0.5 dark:border-zinc-700">
+                                    Statut: {{ \App\Models\Project::statusLabel($project->status) }}
+                                </span>
+                            </div>
+                            <div class="mt-3">
+                                <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                                    <span>Taux d avancement</span>
+                                    <span>{{ $project->completionRate() }}%</span>
+                                </div>
+                                <div class="mt-1 h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                                    <div class="h-2 rounded-full bg-zinc-900 dark:bg-zinc-100" style="width: {{ $project->completionRate() }}%"></div>
+                                </div>
                             </div>
                         </div>
 

@@ -21,7 +21,8 @@ class TasksPageTest extends TestCase
 
         $this->actingAs($owner)
             ->get(route('workspaces.projects.tasks.index', [$workspace, $project]))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee('Avancement du projet');
     }
 
     public function test_non_member_cannot_open_tasks_page(): void
@@ -34,10 +35,11 @@ class TasksPageTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_member_can_create_task_with_active_workspace_assignee(): void
+    public function test_member_can_create_task_with_active_workspace_assignees(): void
     {
         $owner = User::factory()->create();
         $assignee = User::factory()->create();
+        $secondAssignee = User::factory()->create();
 
         $workspace = Workspace::factory()->create([
             'owner_id' => $owner->id,
@@ -49,6 +51,10 @@ class TasksPageTest extends TestCase
                 'status' => Workspace::MEMBER_STATUS_ACTIVE,
             ],
             $assignee->id => [
+                'role' => Workspace::ROLE_MEMBER,
+                'status' => Workspace::MEMBER_STATUS_ACTIVE,
+            ],
+            $secondAssignee->id => [
                 'role' => Workspace::ROLE_MEMBER,
                 'status' => Workspace::MEMBER_STATUS_ACTIVE,
             ],
@@ -65,7 +71,7 @@ class TasksPageTest extends TestCase
             'project' => $project,
         ])
             ->set('title', 'Configurer le flux')
-            ->set('assigneeId', $assignee->id)
+            ->set('assigneeIds', [$assignee->id, $secondAssignee->id])
             ->call('createTask')
             ->assertHasNoErrors();
 
@@ -76,6 +82,18 @@ class TasksPageTest extends TestCase
             'status' => Task::STATUS_TODO,
             'priority' => Task::PRIORITY_MEDIUM,
             'created_by' => $owner->id,
+        ]);
+
+        $task = Task::query()->where('project_id', $project->id)->where('title', 'Configurer le flux')->firstOrFail();
+
+        $this->assertDatabaseHas('task_user', [
+            'task_id' => $task->id,
+            'user_id' => $assignee->id,
+        ]);
+
+        $this->assertDatabaseHas('task_user', [
+            'task_id' => $task->id,
+            'user_id' => $secondAssignee->id,
         ]);
     }
 
@@ -161,13 +179,13 @@ class TasksPageTest extends TestCase
 
         Livewire::actingAs($owner)
             ->test(TasksIndex::class, [
-                'workspace' => $workspace,
-                'project' => $project,
-            ])
+            'workspace' => $workspace,
+            'project' => $project,
+        ])
             ->set('title', 'Tache invalide')
-            ->set('assigneeId', $suspended->id)
+            ->set('assigneeIds', [$suspended->id])
             ->call('createTask')
-            ->assertHasErrors(['assigneeId']);
+            ->assertHasErrors(['assigneeIds.0']);
 
         Livewire::actingAs($owner)
             ->test(TasksIndex::class, [
@@ -175,9 +193,9 @@ class TasksPageTest extends TestCase
                 'project' => $project,
             ])
             ->set('title', 'Autre tache invalide')
-            ->set('assigneeId', $outsider->id)
+            ->set('assigneeIds', [$outsider->id])
             ->call('createTask')
-            ->assertHasErrors(['assigneeId']);
+            ->assertHasErrors(['assigneeIds.0']);
     }
 
     private function projectWithWorkspace(string $role = Workspace::ROLE_OWNER): array

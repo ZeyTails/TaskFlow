@@ -5,6 +5,7 @@ namespace App\Livewire\Tasks;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\Workspace;
+use App\Support\TaskCollaboration;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -26,14 +27,14 @@ class Show extends Component
 
     public ?string $dueDate = null;
 
-    public ?int $assigneeId = null;
+    public array $assigneeIds = [];
 
     public string $commentContent = '';
 
     public function mount(Task $task): void
     {
         $this->task = $task;
-        $this->task->loadMissing(['project.workspace.owner', 'assignee', 'creator', 'comments.user']);
+        $this->task->loadMissing(['project.workspace.owner', 'assignees', 'creator', 'comments.user']);
 
         $this->authorize('view', $this->task);
 
@@ -49,9 +50,10 @@ class Show extends Component
             'status' => ['required', Rule::in(Task::STATUSES)],
             'priority' => ['required', Rule::in(Task::PRIORITIES)],
             'dueDate' => ['nullable', 'date'],
-            'assigneeId' => [
-                'nullable',
+            'assigneeIds' => ['nullable', 'array'],
+            'assigneeIds.*' => [
                 'integer',
+                'distinct',
                 Rule::exists('workspace_user', 'user_id')->where(function ($query): void {
                     $query->where('workspace_id', $this->workspace->id)
                         ->where('status', Workspace::MEMBER_STATUS_ACTIVE);
@@ -59,12 +61,23 @@ class Show extends Component
             ],
         ]);
 
+        $beforeState = [
+            'title' => $this->task->title,
+            'description' => $this->task->description,
+            'status' => $this->task->status,
+            'priority' => $this->task->priority,
+            'due_date' => $this->task->due_date?->format('Y-m-d'),
+        ];
+        $beforeAssigneeIds = $this->task->assignees()->pluck('users.id')->all();
+
         $this->task->update([
             'status' => $validated['status'],
             'priority' => $validated['priority'],
             'due_date' => $validated['dueDate'],
-            'assignee_id' => $validated['assigneeId'],
         ]);
+        $this->task->syncAssignees($validated['assigneeIds'] ?? []);
+        $this->task->refresh()->load('assignees:id,name');
+        TaskCollaboration::recordTaskUpdated($this->task, Auth::user(), $beforeState, $beforeAssigneeIds);
 
         $this->refreshTask();
         $this->syncFormFromTask();
@@ -80,10 +93,12 @@ class Show extends Component
             'commentContent' => ['required', 'string', 'min:2', 'max:2000'],
         ]);
 
-        $this->task->comments()->create([
+        $comment = $this->task->comments()->create([
             'user_id' => Auth::id(),
             'content' => $validated['commentContent'],
         ]);
+
+        TaskCollaboration::recordCommentAdded($comment, Auth::user());
 
         $this->reset('commentContent');
         $this->refreshTask();
@@ -104,7 +119,12 @@ class Show extends Component
 
     public function render()
     {
-        $this->task->load(['project.workspace.owner', 'assignee:id,name,email,avatar_path', 'creator:id,name,email', 'comments.user:id,name,email,avatar_path']);
+        $this->task->load(['project.workspace.owner', 'assignees:id,name,email,avatar_path', 'creator:id,name,email', 'comments.user:id,name,email,avatar_path']);
+        $activityLogs = $this->task->activityLogs()
+            ->with('actor:id,name')
+            ->latest()
+            ->limit(10)
+            ->get();
 
         $members = $this->workspace->members()
             ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
@@ -114,6 +134,7 @@ class Show extends Component
 
         return view('livewire.tasks.show', [
             'members' => $members,
+            'activityLogs' => $activityLogs,
             'canUpdate' => Auth::user()->can('update', $this->task),
             'canComment' => Auth::user()->can('create', [TaskComment::class, $this->task]),
         ]);
@@ -122,7 +143,7 @@ class Show extends Component
     private function refreshTask(): void
     {
         $this->task = $this->task->fresh();
-        $this->task->load(['project.workspace.owner', 'assignee:id,name,email,avatar_path', 'creator:id,name,email', 'comments.user:id,name,email,avatar_path']);
+        $this->task->load(['project.workspace.owner', 'assignees:id,name,email,avatar_path', 'creator:id,name,email', 'comments.user:id,name,email,avatar_path']);
     }
 
     private function syncFormFromTask(): void
@@ -130,6 +151,6 @@ class Show extends Component
         $this->status = $this->task->status;
         $this->priority = $this->task->priority;
         $this->dueDate = $this->task->due_date?->format('Y-m-d');
-        $this->assigneeId = $this->task->assignee_id;
+        $this->assigneeIds = $this->task->assignees->pluck('id')->all();
     }
 }

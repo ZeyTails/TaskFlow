@@ -1,17 +1,23 @@
 <div class="mx-auto w-full max-w-6xl space-y-6">
     <div class="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
         <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="space-y-2">
-                <div class="space-y-[2px]">
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-                        {{ $task->project->workspace->name }} / {{ $task->project->name }}
-                    </p>
-                    <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $task->title }}</h1>
-                </div>
+            <div class="flex items-start gap-3">
+                <x-workspace-icon :workspace="$task->project->workspace" size="lg" />
+                <div class="space-y-2">
+                    <div class="space-y-[2px]">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+                                {{ $task->project->workspace->name }} / {{ $task->project->name }}
+                            </p>
+                            <x-workspace-theme-badge :workspace="$task->project->workspace" />
+                        </div>
+                        <h1 class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{{ $task->title }}</h1>
+                    </div>
 
-                <p class="max-w-3xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-                    {{ $task->description ?: 'Aucune description pour cette tache.' }}
-                </p>
+                    <p class="max-w-3xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                        {{ $task->description ?: 'Aucune description pour cette tache.' }}
+                    </p>
+                </div>
             </div>
 
             <a
@@ -25,17 +31,41 @@
 
         <div class="mt-5 flex flex-wrap gap-2">
             <span class="inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-                Statut: {{ str_replace('_', ' ', $task->status) }}
+                Statut: {{ \App\Models\Task::statusLabel($task->status) }}
             </span>
             <span class="inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-                Priorite: {{ ucfirst($task->priority) }}
+                Priorite: {{ \App\Models\Task::priorityLabel($task->priority) }}
             </span>
             <span class="inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
                 Echeance: {{ $task->due_date?->format('d/m/Y') ?? 'Non definie' }}
             </span>
-            <span class="inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-                Assigne: {{ $task->assignee?->name ?? 'Non assigne' }}
-            </span>
+            @if ($task->assignees->isNotEmpty())
+                @foreach ($task->assignees as $assignee)
+                    @php
+                        $workspaceMember = $members->firstWhere('id', $assignee->id);
+                    @endphp
+                    <span class="inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
+                        Assigne: {{ $assignee->name }}
+                        @if ($workspaceMember?->pivot?->job_title)
+                            <span class="ml-1 text-zinc-500 dark:text-zinc-400">· {{ $workspaceMember->pivot->job_title }}</span>
+                        @endif
+                    </span>
+                @endforeach
+            @else
+                <span class="inline-flex rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
+                    Non assigne
+                </span>
+            @endif
+        </div>
+
+        <div class="mt-5 max-w-xl">
+            <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                <span>Avancement</span>
+                <span>{{ \App\Models\Task::progressPercentage($task->status) }}%</span>
+            </div>
+            <div class="mt-2 h-2 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div class="h-2 rounded-full bg-zinc-900 dark:bg-zinc-100" style="width: {{ \App\Models\Task::progressPercentage($task->status) }}%"></div>
+            </div>
         </div>
 
         <div class="mt-5 grid gap-3 text-sm text-zinc-600 dark:text-zinc-400 md:grid-cols-3">
@@ -154,13 +184,35 @@
                     @endforelse
                 </div>
             </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Historique</h2>
+                        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Actions recentes sur cette tache.</p>
+                    </div>
+                    <span class="inline-flex rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
+                        {{ $activityLogs->count() }} entree{{ $activityLogs->count() > 1 ? 's' : '' }}
+                    </span>
+                </div>
+
+                <div class="mt-5 space-y-3">
+                    @forelse ($activityLogs as $activity)
+                        <x-activity-log-card :activity="$activity" />
+                    @empty
+                        <div class="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+                            Aucun historique disponible pour cette tache.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
         </div>
 
         <div class="space-y-6">
             <div class="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
                 <div>
                     <h2 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Mise a jour rapide</h2>
-                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Statut, priorite, echeance et assignee.</p>
+                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Statut, priorite, echeance et assignes.</p>
                 </div>
 
                 @if (session('task-status'))
@@ -177,9 +229,9 @@
                                 wire:model="status"
                                 class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                             >
-                                <option value="todo">Todo</option>
-                                <option value="in_progress">In progress</option>
-                                <option value="done">Done</option>
+                                <option value="todo">A faire</option>
+                                <option value="in_progress">En cours</option>
+                                <option value="done">Terminee</option>
                             </select>
                             @error('status')
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -192,9 +244,9 @@
                                 wire:model="priority"
                                 class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                             >
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
+                                <option value="low">Basse</option>
+                                <option value="medium">Moyenne</option>
+                                <option value="high">Haute</option>
                             </select>
                             @error('priority')
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
@@ -214,19 +266,14 @@
                         </div>
 
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Assignee</label>
-                            <select
-                                wire:model="assigneeId"
-                                class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                            >
-                                <option value="">Non assigne</option>
-                                @foreach ($members as $member)
-                                    <option value="{{ $member->id }}">{{ $member->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('assigneeId')
-                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p>
-                            @enderror
+                            @include('livewire.tasks.partials.assignee-summary', [
+                                'members' => $members,
+                                'selected' => $assigneeIds,
+                                'label' => 'Personnes assignees',
+                                'modalName' => 'task-detail-assignees',
+                                'errorKey' => 'assigneeIds',
+                                'errorItemKey' => 'assigneeIds.*',
+                            ])
                         </div>
 
                         <button
@@ -236,6 +283,37 @@
                             Enregistrer les changements
                         </button>
                     </form>
+
+                    <flux:modal name="task-detail-assignees" :show="$errors->has('assigneeIds') || $errors->has('assigneeIds.*')" focusable class="max-w-2xl">
+                        <div class="space-y-5">
+                            <div>
+                                <flux:heading size="lg">Choisir les assignes</flux:heading>
+                                <flux:subheading>
+                                    Selectionnez une ou plusieurs personnes pour cette tache.
+                                </flux:subheading>
+                            </div>
+
+                            @include('livewire.tasks.partials.assignee-picker', [
+                                'members' => $members,
+                                'selected' => $assigneeIds,
+                                'model' => 'assigneeIds',
+                                'label' => 'Personnes assignees',
+                                'errorKey' => 'assigneeIds',
+                                'errorItemKey' => 'assigneeIds.*',
+                            ])
+
+                            <div class="flex justify-end">
+                                <flux:modal.close>
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center justify-center rounded-lg border border-black bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                                    >
+                                        Valider
+                                    </button>
+                                </flux:modal.close>
+                            </div>
+                        </div>
+                    </flux:modal>
                 @else
                     <div class="mt-5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                         Vous avez un acces en lecture seule sur cette tache.

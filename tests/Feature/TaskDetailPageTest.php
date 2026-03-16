@@ -68,8 +68,14 @@ class TaskDetailPageTest extends TestCase
     {
         [$owner, $member, , $workspace, , $task] = $this->taskContext();
         $newAssignee = User::factory()->create();
+        $secondAssignee = User::factory()->create();
 
         $workspace->members()->attach($newAssignee->id, [
+            'role' => Workspace::ROLE_MEMBER,
+            'status' => Workspace::MEMBER_STATUS_ACTIVE,
+        ]);
+
+        $workspace->members()->attach($secondAssignee->id, [
             'role' => Workspace::ROLE_MEMBER,
             'status' => Workspace::MEMBER_STATUS_ACTIVE,
         ]);
@@ -79,7 +85,7 @@ class TaskDetailPageTest extends TestCase
             ->set('status', Task::STATUS_DONE)
             ->set('priority', Task::PRIORITY_HIGH)
             ->set('dueDate', now()->addDays(3)->format('Y-m-d'))
-            ->set('assigneeId', $newAssignee->id)
+            ->set('assigneeIds', [$newAssignee->id, $secondAssignee->id])
             ->call('updateTask')
             ->assertHasNoErrors();
 
@@ -89,6 +95,16 @@ class TaskDetailPageTest extends TestCase
             'priority' => Task::PRIORITY_HIGH,
             'assignee_id' => $newAssignee->id,
             'created_by' => $owner->id,
+        ]);
+
+        $this->assertDatabaseHas('task_user', [
+            'task_id' => $task->id,
+            'user_id' => $newAssignee->id,
+        ]);
+
+        $this->assertDatabaseHas('task_user', [
+            'task_id' => $task->id,
+            'user_id' => $secondAssignee->id,
         ]);
     }
 

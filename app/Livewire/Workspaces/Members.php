@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Membres workspace')]
+#[Title('Membres de l espace')]
 class Members extends Component
 {
     use AuthorizesRequests;
@@ -63,6 +63,7 @@ class Members extends Component
         ]);
 
         $email = strtolower(trim($validated['inviteEmail']));
+        $invitedUserExists = User::query()->where('email', $email)->exists();
 
         if ($this->workspace->members()->where('users.email', $email)->exists()) {
             session()->flash('error', 'Cette adresse email appartient deja a un membre.');
@@ -101,7 +102,12 @@ class Members extends Component
         $this->inviteJobTitle = null;
         $this->inviteExpiresInDays = 7;
 
-        session()->flash('status', 'Invitation enregistree et envoyee.');
+        session()->flash(
+            'status',
+            $invitedUserExists
+                ? 'Invitation enregistree et envoyee.'
+                : 'Invitation enregistree. Aucun compte n existe encore pour cette adresse email.'
+        );
     }
 
     public function resendInvitation(int $invitationId): void
@@ -153,12 +159,6 @@ class Members extends Component
     {
         $this->authorize('manageMembers', $this->workspace);
 
-        if ($userId === $this->workspace->owner_id) {
-            session()->flash('error', 'Le proprietaire ne peut pas etre modifie ici.');
-
-            return;
-        }
-
         $member = $this->workspace->members()
             ->whereKey($userId)
             ->select('users.id')
@@ -190,27 +190,33 @@ class Members extends Component
             return;
         }
 
-        if ($userId === $this->workspace->owner_id) {
-            session()->flash('error', 'Le proprietaire ne peut pas etre modifie ici.');
-
-            return;
-        }
-
         if (! $this->workspace->members()->whereKey($userId)->exists()) {
             session()->flash('error', 'Membre introuvable.');
 
             return;
         }
 
-        $this->validate([
-            "memberRoles.$userId" => ['required', Rule::in($this->assignableRoles())],
-            "jobTitles.$userId" => ['nullable', 'string', 'max:120'],
-        ]);
+        $isOwner = $userId === $this->workspace->owner_id;
 
-        $this->workspace->members()->updateExistingPivot($userId, [
-            'role' => $this->memberRoles[$userId],
+        $rules = [
+            "jobTitles.$userId" => ['nullable', 'string', 'max:120'],
+        ];
+
+        if (! $isOwner) {
+            $rules["memberRoles.$userId"] = ['required', Rule::in($this->assignableRoles())];
+        }
+
+        $this->validate($rules);
+
+        $payload = [
             'job_title' => $this->normalizeJobTitle($this->jobTitles[$userId] ?? null),
-        ]);
+        ];
+
+        if (! $isOwner) {
+            $payload['role'] = $this->memberRoles[$userId];
+        }
+
+        $this->workspace->members()->updateExistingPivot($userId, $payload);
 
         $this->editingMemberId = null;
         session()->flash('status', 'Membre mis a jour avec succes.');
@@ -325,7 +331,7 @@ class Members extends Component
 
         $this->editingMemberId = null;
 
-        session()->flash('status', 'Ownership transfere avec succes.');
+        session()->flash('status', 'Propriete transferee avec succes.');
     }
 
     public function render()

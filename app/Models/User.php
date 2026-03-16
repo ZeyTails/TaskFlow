@@ -77,14 +77,14 @@ class User extends Authenticatable
     public function workspaces(): BelongsToMany
     {
         return $this->belongsToMany(Workspace::class, 'workspace_user')
-            ->withPivot('role', 'job_title', 'status', 'suspended_at')
+            ->withPivot('role', 'job_title', 'status', 'suspended_at', 'is_pinned')
             ->wherePivot('status', Workspace::MEMBER_STATUS_ACTIVE)
             ->withTimestamps();
     }
 
-    public function assignedTasks(): HasMany
+    public function assignedTasks(): BelongsToMany
     {
-        return $this->hasMany(Task::class, 'assignee_id');
+        return $this->belongsToMany(Task::class, 'task_user')->withTimestamps();
     }
 
     public function createdTasks(): HasMany
@@ -95,6 +95,16 @@ class User extends Authenticatable
     public function taskComments(): HasMany
     {
         return $this->hasMany(TaskComment::class);
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'user_id');
+    }
+
+    public function taskNotifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
     }
 
     public function sentWorkspaceInvitations(): HasMany

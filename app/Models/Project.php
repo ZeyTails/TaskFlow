@@ -31,6 +31,18 @@ class Project extends Model
         self::STATUS_ARCHIVED,
     ];
 
+    public const PRIORITY_LABELS = [
+        self::PRIORITY_LOW => 'Basse',
+        self::PRIORITY_MEDIUM => 'Moyenne',
+        self::PRIORITY_HIGH => 'Haute',
+    ];
+
+    public const STATUS_LABELS = [
+        self::STATUS_ACTIVE => 'Active',
+        self::STATUS_ON_HOLD => 'En pause',
+        self::STATUS_ARCHIVED => 'Archive',
+    ];
+
     protected $fillable = [
         'workspace_id',
         'name',
@@ -47,5 +59,28 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
+    public function completionRate(): int
+    {
+        $total = $this->tasks_count ?? $this->tasks()->count();
+        $completed = $this->completed_tasks_count ?? $this->tasks()->where('status', Task::STATUS_DONE)->count();
+
+        return $total > 0 ? (int) round(($completed / $total) * 100) : 0;
+    }
+
+    public static function priorityLabel(string $priority): string
+    {
+        return self::PRIORITY_LABELS[$priority] ?? $priority;
+    }
+
+    public static function statusLabel(string $status): string
+    {
+        return self::STATUS_LABELS[$status] ?? $status;
     }
 }

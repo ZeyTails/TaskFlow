@@ -65,6 +65,25 @@ class WorkspaceMembersManagementTest extends TestCase
         ]);
     }
 
+    public function test_owner_is_told_when_invited_email_has_no_account(): void
+    {
+        [$owner, $workspace] = $this->workspaceWithOwner();
+
+        Livewire::actingAs($owner)
+            ->test(Members::class, ['workspace' => $workspace])
+            ->set('inviteEmail', 'nouveau@example.com')
+            ->set('inviteRole', Workspace::ROLE_MEMBER)
+            ->set('inviteExpiresInDays', 7)
+            ->call('createInvitation')
+            ->assertSee('Aucun compte n existe encore pour cette adresse email.');
+
+        $this->assertDatabaseHas('workspace_invitations', [
+            'workspace_id' => $workspace->id,
+            'email' => 'nouveau@example.com',
+            'role' => Workspace::ROLE_MEMBER,
+        ]);
+    }
+
     public function test_owner_can_update_member_role_and_remove_member(): void
     {
         [$owner, $workspace] = $this->workspaceWithOwner();
@@ -97,19 +116,22 @@ class WorkspaceMembersManagementTest extends TestCase
         ]);
     }
 
-    public function test_owner_cannot_change_or_remove_workspace_owner(): void
+    public function test_owner_can_update_own_job_title_but_cannot_remove_workspace_owner(): void
     {
         [$owner, $workspace] = $this->workspaceWithOwner();
 
         Livewire::actingAs($owner)
             ->test(Members::class, ['workspace' => $workspace])
             ->call('startEditing', $owner->id)
+            ->set("jobTitles.{$owner->id}", 'Responsable produit')
+            ->call('saveMemberChanges', $owner->id)
             ->call('removeMember', $owner->id);
 
         $this->assertDatabaseHas('workspace_user', [
             'workspace_id' => $workspace->id,
             'user_id' => $owner->id,
             'role' => Workspace::ROLE_OWNER,
+            'job_title' => 'Responsable produit',
         ]);
     }
 

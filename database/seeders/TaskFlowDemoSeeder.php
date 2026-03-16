@@ -72,7 +72,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_IN_PROGRESS,
                 'priority' => Task::PRIORITY_HIGH,
                 'due_date' => now()->addDays(2)->toDateString(),
-                'assignee_id' => $member->id,
+                'assignee_ids' => [$member->id],
                 'created_by' => $owner->id,
             ],
             [
@@ -82,7 +82,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_TODO,
                 'priority' => Task::PRIORITY_MEDIUM,
                 'due_date' => now()->addDays(5)->toDateString(),
-                'assignee_id' => $member->id,
+                'assignee_ids' => [$member->id, $owner->id],
                 'created_by' => $owner->id,
             ],
             [
@@ -92,7 +92,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_DONE,
                 'priority' => Task::PRIORITY_LOW,
                 'due_date' => now()->subDays(1)->toDateString(),
-                'assignee_id' => $owner->id,
+                'assignee_ids' => [$owner->id],
                 'created_by' => $member->id,
             ],
             [
@@ -102,7 +102,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_IN_PROGRESS,
                 'priority' => Task::PRIORITY_HIGH,
                 'due_date' => now()->addDays(1)->toDateString(),
-                'assignee_id' => $owner->id,
+                'assignee_ids' => [$owner->id, $member->id],
                 'created_by' => $owner->id,
             ],
             [
@@ -112,7 +112,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_TODO,
                 'priority' => Task::PRIORITY_HIGH,
                 'due_date' => now()->addDays(4)->toDateString(),
-                'assignee_id' => $member->id,
+                'assignee_ids' => [$member->id],
                 'created_by' => $owner->id,
             ],
             [
@@ -122,7 +122,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_TODO,
                 'priority' => Task::PRIORITY_MEDIUM,
                 'due_date' => now()->addDays(6)->toDateString(),
-                'assignee_id' => $member->id,
+                'assignee_ids' => [$member->id],
                 'created_by' => $owner->id,
             ],
             [
@@ -132,7 +132,7 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_DONE,
                 'priority' => Task::PRIORITY_LOW,
                 'due_date' => now()->subDays(2)->toDateString(),
-                'assignee_id' => $owner->id,
+                'assignee_ids' => [$owner->id],
                 'created_by' => $member->id,
             ],
             [
@@ -142,12 +142,20 @@ class TaskFlowDemoSeeder extends Seeder
                 'status' => Task::STATUS_TODO,
                 'priority' => Task::PRIORITY_MEDIUM,
                 'due_date' => now()->addDays(3)->toDateString(),
-                'assignee_id' => $viewer->id,
+                'assignee_ids' => [$viewer->id],
                 'created_by' => $owner->id,
             ],
         ];
 
-        $createdTasks = collect($tasks)->map(fn (array $taskData) => Task::create($taskData));
+        $createdTasks = collect($tasks)->map(function (array $taskData) {
+            $assigneeIds = $taskData['assignee_ids'] ?? [];
+            unset($taskData['assignee_ids']);
+
+            $task = Task::create($taskData);
+            $task->syncAssignees($assigneeIds);
+
+            return $task;
+        });
 
         TaskComment::create([
             'task_id' => $createdTasks[0]->id,

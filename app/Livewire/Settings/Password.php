@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Password settings')]
+#[Title('Parametres du mot de passe')]
 class Password extends Component
 {
     use PasswordValidationRules;

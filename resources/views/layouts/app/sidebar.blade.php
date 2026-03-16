@@ -13,6 +13,13 @@
                     ->where('email', auth()->user()->email)
                     ->count();
             }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('user_notifications')) {
+                $notificationsCount += \App\Models\UserNotification::query()
+                    ->where('user_id', auth()->id())
+                    ->whereNull('read_at')
+                    ->count();
+            }
         @endphp
 
         <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -35,13 +42,8 @@
                     <flux:sidebar.item icon="calendar" :href="route('calendar')" :current="request()->routeIs('calendar')" wire:navigate>
                         Calendrier
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="bell" :href="route('notifications')" :current="request()->routeIs('notifications')" wire:navigate>
-                        Notifications
-                        @if ($notificationsCount > 0)
-                            <span class="ml-2 inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold leading-none text-blue-700 dark:border-blue-900/70 dark:bg-blue-900/20 dark:text-blue-300">
-                                {{ $notificationsCount }}
-                            </span>
-                        @endif
+                    <flux:sidebar.item icon="book-open-text" :href="route('reports')" :current="request()->routeIs('reports*')" wire:navigate>
+                        Rapports
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="cog" :href="route('profile.edit')" :current="request()->routeIs('profile.edit', 'user-password.edit', 'appearance.edit')" wire:navigate>
                         Parametres
@@ -57,26 +59,33 @@
         <flux:header class="border-b border-zinc-200 bg-white/90 backdrop-blur lg:px-6 dark:border-zinc-800 dark:bg-zinc-900/90">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
-            <div class="hidden w-full max-w-xl md:block">
-                <label for="search-global" class="sr-only">Recherche</label>
-                <input
-                    id="search-global"
-                    type="search"
-                    placeholder="Rechercher (MVP)"
-                    class="w-full rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-400"
-                />
+            <div class="hidden lg:flex items-center">
+                <img src="{{ asset('storage/Logo UTT.png') }}" alt="Logo UTT" class="h-8 w-auto" />
             </div>
 
             <flux:spacer />
 
-            <a
-                href="{{ route('workspaces.index') }}"
-                wire:navigate
-                class="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            >
-                <span class="text-base leading-none">+</span>
-                <span>Nouveau</span>
-            </a>
+            <div class="flex items-center gap-2">
+                <a
+                    href="{{ route('notifications') }}"
+                    wire:navigate
+                    @class([
+                        'relative inline-flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-medium transition',
+                        'border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200' => request()->routeIs('notifications'),
+                        'border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800' => ! request()->routeIs('notifications'),
+                    ])"
+                    aria-label="Notifications"
+                >
+                    <flux:icon.bell class="size-4" />
+                    @if ($notificationsCount > 0)
+                        <span class="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-blue-700 dark:border-blue-900/70 dark:bg-blue-900/20 dark:text-blue-300">
+                            {{ $notificationsCount }}
+                        </span>
+                    @endif
+                </a>
+
+                <livewire:workspaces.quick-actions />
+            </div>
 
             <flux:dropdown position="top" align="end" class="lg:hidden">
                 <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
